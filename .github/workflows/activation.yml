@@ -1,0 +1,51 @@
+# Single-use workflow: Request a Unity manual activation file (.alf).
+#
+# Usage:
+#   1. Trigger this workflow manually from GitHub Actions → "Run workflow".
+#   2. After it finishes, download the "Manual-Activation-File" artifact.
+#   3. Go to https://license.unity3d.com/manual and upload the .alf file.
+#   4. Download the resulting .ulf license file.
+#   5. Copy the contents of the .ulf file and save it as the repository secret
+#      UNITY_LICENSE (Settings → Secrets and variables → Actions → New secret).
+#   6. Also add UNITY_EMAIL and UNITY_PASSWORD secrets for your Unity account.
+#
+# This workflow only needs to be run once (or when the license expires / changes).
+
+name: Acquire activation file
+
+on:
+  workflow_dispatch: {}
+
+jobs:
+  activation:
+    name: Request manual activation file
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Generate manual activation file
+        run: |
+          UNITY_VERSION=$(cat ProjectSettings/ProjectVersion.txt | grep "m_EditorVersion:" | awk '{print $2}')
+          echo "Unity version: $UNITY_VERSION"
+
+          docker run --rm \
+            -v "${{ github.workspace }}:/root/project" \
+            "unityci/editor:ubuntu-${UNITY_VERSION}-base-3" \
+            bash -c "
+              unity-editor \
+                -batchmode \
+                -nographics \
+                -createManualActivationFile \
+                -logFile /dev/stdout || true
+              find / -maxdepth 3 -name '*.alf' 2>/dev/null \
+                -exec cp {} /root/project/ \;
+            "
+
+      - name: Upload manual activation file as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Manual-Activation-File
+          path: "*.alf"
+          if-no-files-found: error
+          retention-days: 1
