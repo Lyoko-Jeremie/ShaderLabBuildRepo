@@ -23,6 +23,7 @@ jobs:
   build:
     name: Build ShaderLab project
     runs-on: ubuntu-latest
+    environment: actions # 这里的名称必须和你配置 Environment secrets 时的环境名称完全一致
 
     steps:
       - name: Checkout repository
