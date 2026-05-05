@@ -1,0 +1,53 @@
+# Unity build artifacts and auto-generated files
+# See: https://github.com/github/gitignore/blob/main/Unity.gitignore
+
+# Unity-generated folders
+[Ll]ibrary/
+[Tt]emp/
+[Oo]bj/
+[Bb]uild/
+[Bb]uilds/
+[Ll]ogs/
+[Uu]ser[Ss]ettings/
+
+# MemoryCaptures can get large; exclude by default
+[Mm]emory[Cc]aptures/
+
+# Asset meta data should only be ignored when no version control system is used,
+# as it contains data needed to know which assets are used.
+# *.meta
+
+# Unity3D generated meta files
+*.pidb.meta
+*.pdb.meta
+*.mdb.meta
+
+# Unity3D generated file on crash reports
+sysinfo.txt
+
+# Unity auto-generated package lock
+Packages/packages-lock.json
+
+# Builds
+*.apk
+*.aab
+*.unitypackage
+*.app
+
+# Crashlytics generated file
+Assets/StreamingAssets/crashlytics-build.properties
+
+# Dotnet / C# build artifacts
+*.csproj
+*.sln
+
+# JetBrains Rider / Visual Studio
+.idea/
+.vs/
+*.user
+
+# macOS
+.DS_Store
+
+# Windows
+Thumbs.db
