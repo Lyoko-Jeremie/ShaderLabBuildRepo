@@ -48,13 +48,27 @@ public class ShaderBuildScript
     private const string OutputDirectory = "build";
 
     /// <summary>
+    /// Returns the platform-specific output subdirectory derived from the active
+    /// build target that was set by the CI runner before invoking this method.
+    /// Example: "build/StandaloneWindows64" or "build/Android".
+    /// </summary>
+    private static string GetPlatformOutputDirectory()
+    {
+        string platformName = EditorUserBuildSettings.activeBuildTarget.ToString();
+        return Path.Combine(OutputDirectory, platformName);
+    }
+
+    /// <summary>
     /// Entry point called by the CI workflow (-buildMethod ShaderBuildScript.Build).
-    /// Builds one self-contained AssetBundle per shader into the build/ directory.
+    /// Builds one self-contained AssetBundle per shader into a platform-specific
+    /// subdirectory: build/<TargetPlatform>/.
     /// </summary>
     [MenuItem("Build/Export Shader AssetBundles")]
     public static void Build()
     {
-        Debug.Log("[ShaderBuildScript] Starting per-shader AssetBundle build...");
+        BuildTarget target = EditorUserBuildSettings.activeBuildTarget;
+        string platformOutputDir = GetPlatformOutputDirectory();
+        Debug.Log($"[ShaderBuildScript] Starting per-shader AssetBundle build for {target} -> {platformOutputDir}/");
 
         // Collect .shader assets.
         string[] shaderAssets = AssetDatabase
@@ -91,15 +105,15 @@ public class ShaderBuildScript
             }
         }
 
-        Directory.CreateDirectory(OutputDirectory);
+        Directory.CreateDirectory(platformOutputDir);
 
         AssetBundleManifest manifest;
         try
         {
             manifest = BuildPipeline.BuildAssetBundles(
-                OutputDirectory,
+                platformOutputDir,
                 BuildAssetBundleOptions.None,
-                BuildTarget.StandaloneWindows64
+                target
             );
         }
         finally
@@ -121,7 +135,7 @@ public class ShaderBuildScript
         }
 
         string[] builtBundles = manifest.GetAllAssetBundles();
-        Debug.Log($"[ShaderBuildScript] Build complete. {builtBundles.Length} bundle(s) written to: {OutputDirectory}/");
+        Debug.Log($"[ShaderBuildScript] Build complete. {builtBundles.Length} bundle(s) written to: {platformOutputDir}/");
         foreach (string b in builtBundles)
             Debug.Log($"[ShaderBuildScript]   {b}");
 

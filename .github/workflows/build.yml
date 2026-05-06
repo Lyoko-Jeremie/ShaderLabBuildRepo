@@ -9,7 +9,18 @@
 #   - UNITY_EMAIL    : Email address associated with your Unity account.
 #   - UNITY_PASSWORD : Password for your Unity account.
 #
-# Build output is uploaded as a GitHub Actions artifact named "ShaderLib-AssetBundle".
+# Build output:
+#   Each target platform produces a separate artifact named
+#   "ShaderLib-<Platform>" containing the AssetBundles for that platform.
+#   Shader source files are uploaded as "ShaderLib-Sources".
+#
+# Artifact layout (after downloading all artifacts):
+#   ShaderLib-StandaloneWindows64/   *.assetbundle
+#   ShaderLib-StandaloneLinux64/     *.assetbundle
+#   ShaderLib-Android/               *.assetbundle
+#   ShaderLib-iOS/                   *.assetbundle
+#   ShaderLib-WebGL/                 *.assetbundle
+#   ShaderLib-Sources/               *.shader  CGInclude/
 
 name: Build ShaderLab
 
@@ -21,9 +32,19 @@ on:
 
 jobs:
   build:
-    name: Build ShaderLab project
+    name: Build for ${{ matrix.targetPlatform }}
     runs-on: ubuntu-latest
     environment: actions # 这里的名称必须和你配置 Environment secrets 时的环境名称完全一致
+
+    strategy:
+      fail-fast: false
+      matrix:
+        targetPlatform:
+          - StandaloneWindows64
+          - StandaloneLinux64
+          - Android
+          - iOS
+          - WebGL
 
     steps:
       - name: Checkout repository
@@ -35,8 +56,9 @@ jobs:
         uses: actions/cache@v4
         with:
           path: Library
-          key: Library-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
+          key: Library-${{ matrix.targetPlatform }}-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
           restore-keys: |
+            Library-${{ matrix.targetPlatform }}-
             Library-
 
       - name: Build project
@@ -47,18 +69,33 @@ jobs:
           UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
         with:
           projectPath: .
-          targetPlatform: StandaloneWindows64
+          targetPlatform: ${{ matrix.targetPlatform }}
           buildMethod: ShaderBuildScript.Build
           allowDirtyBuild: true
 
-      - name: Copy shader sources into build directory
-        run: |
-          sudo chown -R "$(id -u):$(id -g)" build/
-          mkdir -p build && cp -r Assets/Shaders/. build/
+      - name: Fix build directory permissions
+        run: sudo chown -R "$(id -u):$(id -g)" build/
 
-      - name: Upload build artifacts
+      - name: Upload platform artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ShaderLib-AssetBundle
-          path: build/
+          name: ShaderLib-${{ matrix.targetPlatform }}
+          path: build/${{ matrix.targetPlatform }}/
+          if-no-files-found: error
+
+  upload-sources:
+    name: Upload shader sources
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          lfs: true
+
+      - name: Upload source artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ShaderLib-Sources
+          path: Assets/Shaders/
           if-no-files-found: error
