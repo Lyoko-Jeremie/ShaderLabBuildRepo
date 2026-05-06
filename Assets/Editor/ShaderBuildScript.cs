@@ -62,7 +62,7 @@ public class ShaderBuildScript
             manifest = BuildPipeline.BuildAssetBundles(
                 OutputDirectory,
                 BuildAssetBundleOptions.None,
-                BuildTarget.StandaloneLinux64
+                BuildTarget.StandaloneWindows64
             );
         }
         finally
