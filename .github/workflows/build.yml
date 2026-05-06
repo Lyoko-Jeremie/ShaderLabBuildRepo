@@ -1,7 +1,8 @@
 # ShaderLab build workflow.
 #
 # Triggers:
-#   - Automatically on every push to the main branch.
+#   - Automatically on every push to any branch.
+#   - Automatically on every pull request (open, synchronize, reopen).
 #   - Manually from GitHub Actions → "Run workflow".
 #
 # Prerequisites (repository secrets):
@@ -26,8 +27,7 @@ name: Build ShaderLab
 
 on:
   push:
-    branches:
-      - main
+  pull_request:
   workflow_dispatch: {}
 
 jobs:
