@@ -54,7 +54,7 @@ public class ShaderBuildScript
         // keeps every bundle truly independent with no cross-bundle references.
         foreach (string shaderAsset in shaderAssets)
         {
-            string bundleName = Path.GetFileNameWithoutExtension(shaderAsset).ToLowerInvariant();
+            string bundleName = Path.GetFileNameWithoutExtension(shaderAsset).ToLowerInvariant() + ".assetbundle";
             Debug.Log($"[ShaderBuildScript] Bundle '{bundleName}' <- {shaderAsset}");
 
             AssetImporter importer = AssetImporter.GetAtPath(shaderAsset);
