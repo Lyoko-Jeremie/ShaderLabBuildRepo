@@ -52,7 +52,9 @@ jobs:
           allowDirtyBuild: true
 
       - name: Copy shader sources into build directory
-        run: mkdir -p build && cp -r Assets/Shaders/. build/
+        run: |
+          sudo chown -R "$(id -u):$(id -g)" build/
+          mkdir -p build && cp -r Assets/Shaders/. build/
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
