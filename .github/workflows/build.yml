@@ -9,7 +9,7 @@
 #   - UNITY_EMAIL    : Email address associated with your Unity account.
 #   - UNITY_PASSWORD : Password for your Unity account.
 #
-# Build output is uploaded as a GitHub Actions artifact named "ShaderLib-Package".
+# Build output is uploaded as a GitHub Actions artifact named "ShaderLib-AssetBundle".
 
 name: Build ShaderLab
 
@@ -47,13 +47,13 @@ jobs:
           UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
         with:
           projectPath: .
-          targetPlatform: StandaloneLinux64
+          targetPlatform: StandaloneWindows64
           buildMethod: ShaderBuildScript.Build
           allowDirtyBuild: true
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: ShaderLib-Package
+          name: ShaderLib-AssetBundle
           path: build/
           if-no-files-found: error
