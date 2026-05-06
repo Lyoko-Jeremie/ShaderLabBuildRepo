@@ -3,49 +3,23 @@ using UnityEngine;
 using System.IO;
 using System.Linq;
 using System.Collections.Generic;
-using System.Text.RegularExpressions;
 
 /// <summary>
-/// Unity Editor build script for building ShaderLab fragments as AssetBundles.
-/// Each shader in Assets/Shaders is compiled into its own independently usable
-/// AssetBundle named after the shader file (underscore-separated lower-case, no extension).
+/// Unity Editor build script for building ShaderLab fragments as a single AssetBundle.
+/// All shaders in Assets/Shaders are compiled into one AssetBundle named "shaders.assetbundle".
 ///
 /// Include files (.cginc / .hlsl / .glsl) are compile-time only: Unity resolves
 /// them when building the bundle and bakes the resulting bytecode into the shader
-/// asset, so no include file needs to be present at runtime.  Each produced
-/// AssetBundle is therefore fully self-contained with no external dependencies.
+/// asset, so no include file needs to be present at runtime.  The produced
+/// AssetBundle is fully self-contained with no external dependencies.
 ///
 /// Invoked by the CI workflow via -buildMethod ShaderBuildScript.Build.
 /// </summary>
 public class ShaderBuildScript
 {
-    /// <summary>
-    /// Converts a PascalCase or camelCase identifier to underscore-separated lower-case
-    /// (snake_case).  Consecutive uppercase letters (e.g. "XMLParser") are kept together
-    /// as one word unless followed by a lower-case letter.
-    /// Examples:
-    ///   ExampleUnlit              -> example_unlit
-    ///   RimWorldBreathingLight    -> rim_world_breathing_light
-    ///   MyShaderV2                -> my_shader_v2
-    /// </summary>
-    private static readonly Regex SnakeCaseRegex = new Regex(
-        @"(?<=[a-z0-9])([A-Z])|(?<=[A-Z])([A-Z](?=[a-z]))",
-        RegexOptions.Compiled);
-
-    private static string ToSnakeCase(string name)
-    {
-        if (string.IsNullOrEmpty(name))
-            return name;
-
-        // Insert an underscore before every upper-case letter that is either:
-        //   (a) preceded by a lower-case letter or digit, or
-        //   (b) preceded by an upper-case letter and followed by a lower-case letter
-        //       (handles sequences like "XMLParser" -> "xml_parser").
-        return SnakeCaseRegex.Replace(name, "_$0").ToLowerInvariant();
-    }
-
     private const string ShadersPath = "Assets/Shaders";
     private const string OutputDirectory = "build";
+    private const string BundleName = "shaders.assetbundle";
 
     /// <summary>
     /// Returns the platform-specific output subdirectory derived from the active
@@ -60,15 +34,15 @@ public class ShaderBuildScript
 
     /// <summary>
     /// Entry point called by the CI workflow (-buildMethod ShaderBuildScript.Build).
-    /// Builds one self-contained AssetBundle per shader into a platform-specific
-    /// subdirectory: build/<TargetPlatform>/.
+    /// Builds one self-contained AssetBundle containing all shaders into a
+    /// platform-specific subdirectory: build/<TargetPlatform>/.
     /// </summary>
     [MenuItem("Build/Export Shader AssetBundles")]
     public static void Build()
     {
         BuildTarget target = EditorUserBuildSettings.activeBuildTarget;
         string platformOutputDir = GetPlatformOutputDirectory();
-        Debug.Log($"[ShaderBuildScript] Starting per-shader AssetBundle build for {target} -> {platformOutputDir}/");
+        Debug.Log($"[ShaderBuildScript] Starting single AssetBundle build for {target} -> {platformOutputDir}/");
 
         // Collect .shader assets.
         string[] shaderAssets = AssetDatabase
@@ -87,20 +61,18 @@ public class ShaderBuildScript
         // the metadata afterwards and avoid persisting changes in the project.
         var assignedAssets = new HashSet<string>();
 
-        // Assign each shader to its own named bundle.
+        // Assign all shaders to the single shared bundle.
         // Include files (.cginc/.hlsl/.glsl) are intentionally excluded: Unity
         // resolves them at bundle-build time and bakes the compiled bytecode into
-        // the shader asset, so they are not required at runtime.  Omitting them
-        // keeps every bundle truly independent with no cross-bundle references.
+        // the shader asset, so they are not required at runtime.
         foreach (string shaderAsset in shaderAssets)
         {
-            string bundleName = ToSnakeCase(Path.GetFileNameWithoutExtension(shaderAsset)) + ".assetbundle";
-            Debug.Log($"[ShaderBuildScript] Bundle '{bundleName}' <- {shaderAsset}");
+            Debug.Log($"[ShaderBuildScript] Bundle '{BundleName}' <- {shaderAsset}");
 
             AssetImporter importer = AssetImporter.GetAtPath(shaderAsset);
             if (importer != null)
             {
-                importer.SetAssetBundleNameAndVariant(bundleName, string.Empty);
+                importer.SetAssetBundleNameAndVariant(BundleName, string.Empty);
                 assignedAssets.Add(shaderAsset);
             }
         }
