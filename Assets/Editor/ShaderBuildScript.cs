@@ -3,11 +3,12 @@ using UnityEngine;
 using System.IO;
 using System.Linq;
 using System.Collections.Generic;
+using System.Text.RegularExpressions;
 
 /// <summary>
 /// Unity Editor build script for building ShaderLab fragments as AssetBundles.
 /// Each shader in Assets/Shaders is compiled into its own independently usable
-/// AssetBundle named after the shader file (lower-case, no extension).
+/// AssetBundle named after the shader file (underscore-separated lower-case, no extension).
 ///
 /// Include files (.cginc / .hlsl / .glsl) are compile-time only: Unity resolves
 /// them when building the bundle and bakes the resulting bytecode into the shader
@@ -18,6 +19,28 @@ using System.Collections.Generic;
 /// </summary>
 public class ShaderBuildScript
 {
+    /// <summary>
+    /// Converts a PascalCase or camelCase identifier to underscore-separated lower-case
+    /// (snake_case).  Consecutive uppercase letters (e.g. "XMLParser") are kept together
+    /// as one word unless followed by a lower-case letter.
+    /// Examples:
+    ///   ExampleUnlit              -> example_unlit
+    ///   RimWorldBreathingLight    -> rim_world_breathing_light
+    ///   MyShaderV2                -> my_shader_v2
+    /// </summary>
+    private static string ToSnakeCase(string name)
+    {
+        if (string.IsNullOrEmpty(name))
+            return name;
+
+        // Insert an underscore before every upper-case letter that is either:
+        //   (a) preceded by a lower-case letter or digit, or
+        //   (b) preceded by an upper-case letter and followed by a lower-case letter
+        //       (handles sequences like "XMLParser" -> "xml_parser").
+        string result = Regex.Replace(name, @"(?<=[a-z0-9])([A-Z])|(?<=[A-Z])([A-Z](?=[a-z]))", "_$0");
+        return result.ToLowerInvariant();
+    }
+
     private const string ShadersPath = "Assets/Shaders";
     private const string OutputDirectory = "build";
 
@@ -54,7 +77,7 @@ public class ShaderBuildScript
         // keeps every bundle truly independent with no cross-bundle references.
         foreach (string shaderAsset in shaderAssets)
         {
-            string bundleName = Path.GetFileNameWithoutExtension(shaderAsset).ToLowerInvariant() + ".assetbundle";
+            string bundleName = ToSnakeCase(Path.GetFileNameWithoutExtension(shaderAsset)) + ".assetbundle";
             Debug.Log($"[ShaderBuildScript] Bundle '{bundleName}' <- {shaderAsset}");
 
             AssetImporter importer = AssetImporter.GetAtPath(shaderAsset);
