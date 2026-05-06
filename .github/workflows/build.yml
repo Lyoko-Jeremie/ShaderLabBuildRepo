@@ -1,7 +1,8 @@
 # ShaderLab build workflow.
 #
 # Triggers:
-#   - Automatically on every push to the main branch.
+#   - Automatically on every push to any branch.
+#   - Automatically on every pull request (open, synchronize, reopen).
 #   - Manually from GitHub Actions → "Run workflow".
 #
 # Prerequisites (repository secrets):
@@ -26,8 +27,7 @@ name: Build ShaderLab
 
 on:
   push:
-    branches:
-      - main
+  pull_request:
   workflow_dispatch: {}
 
 jobs:
@@ -72,6 +72,9 @@ jobs:
           targetPlatform: ${{ matrix.targetPlatform }}
           buildMethod: ShaderBuildScript.Build
           allowDirtyBuild: true
+          # Pin the exact Unity version used by RimWorld so the AssetBundle header
+          # matches and LoadFromFile does not return null at runtime.
+          unityVersion: 2022.3.35f1
 
       - name: Fix build directory permissions
         run: sudo chown -R "$(id -u):$(id -g)" build/
