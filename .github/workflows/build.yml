@@ -72,6 +72,9 @@ jobs:
           targetPlatform: ${{ matrix.targetPlatform }}
           buildMethod: ShaderBuildScript.Build
           allowDirtyBuild: true
+          # Pin the exact Unity version used by RimWorld so the AssetBundle header
+          # matches and LoadFromFile does not return null at runtime.
+          unityVersion: 2022.3.35f1
 
       - name: Fix build directory permissions
         run: sudo chown -R "$(id -u):$(id -g)" build/

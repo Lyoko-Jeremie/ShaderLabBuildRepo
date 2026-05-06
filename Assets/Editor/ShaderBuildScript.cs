@@ -110,9 +110,15 @@ public class ShaderBuildScript
         AssetBundleManifest manifest;
         try
         {
+            // ChunkBasedCompression (LZ4) is the Unity-recommended format for
+            // AssetBundle.LoadFromFile.  The default (None = LZMA) can cause
+            // LoadFromFile to return null when the bundle is loaded by a runtime
+            // that differs even slightly from the exact build environment, and it
+            // requires full decompression on load.  LZ4 supports random-access
+            // reading and has far better cross-version compatibility.
             manifest = BuildPipeline.BuildAssetBundles(
                 platformOutputDir,
-                BuildAssetBundleOptions.None,
+                BuildAssetBundleOptions.ChunkBasedCompression,
                 target
             );
         }
