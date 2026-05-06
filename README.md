@@ -87,7 +87,7 @@ into a distributable **`ShaderLib.unitypackage`** file, which is uploaded as the
 
 ## Unity version
 
-This project targets **Unity 2022.3 LTS** (`2022.3.20f1`).
+This project targets **Unity 2022.3 LTS** (`2022.3.35f1`), which matches the Unity version used by RimWorld 1.6.
 To change the version, update `ProjectSettings/ProjectVersion.txt`.
 
 ---
