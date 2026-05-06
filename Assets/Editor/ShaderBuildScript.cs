@@ -28,6 +28,10 @@ public class ShaderBuildScript
     ///   RimWorldBreathingLight    -> rim_world_breathing_light
     ///   MyShaderV2                -> my_shader_v2
     /// </summary>
+    private static readonly Regex SnakeCaseRegex = new Regex(
+        @"(?<=[a-z0-9])([A-Z])|(?<=[A-Z])([A-Z](?=[a-z]))",
+        RegexOptions.Compiled);
+
     private static string ToSnakeCase(string name)
     {
         if (string.IsNullOrEmpty(name))
@@ -37,8 +41,7 @@ public class ShaderBuildScript
         //   (a) preceded by a lower-case letter or digit, or
         //   (b) preceded by an upper-case letter and followed by a lower-case letter
         //       (handles sequences like "XMLParser" -> "xml_parser").
-        string result = Regex.Replace(name, @"(?<=[a-z0-9])([A-Z])|(?<=[A-Z])([A-Z](?=[a-z]))", "_$0");
-        return result.ToLowerInvariant();
+        return SnakeCaseRegex.Replace(name, "_$0").ToLowerInvariant();
     }
 
     private const string ShadersPath = "Assets/Shaders";
