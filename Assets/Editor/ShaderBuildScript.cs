@@ -2,56 +2,67 @@ using UnityEditor;
 using UnityEngine;
 using System.IO;
 using System.Linq;
+using System.Collections.Generic;
 
 /// <summary>
-/// Unity Editor build script for building ShaderLab fragments as an AssetBundle.
+/// Unity Editor build script for building ShaderLab fragments as AssetBundles.
+/// Each shader in Assets/Shaders is compiled into its own independently usable
+/// AssetBundle named after the shader file (lower-case, no extension).
+///
+/// Include files (.cginc / .hlsl / .glsl) are compile-time only: Unity resolves
+/// them when building the bundle and bakes the resulting bytecode into the shader
+/// asset, so no include file needs to be present at runtime.  Each produced
+/// AssetBundle is therefore fully self-contained with no external dependencies.
+///
 /// Invoked by the CI workflow via -buildMethod ShaderBuildScript.Build.
 /// </summary>
 public class ShaderBuildScript
 {
     private const string ShadersPath = "Assets/Shaders";
     private const string OutputDirectory = "build";
-    private const string BundleName = "shaderlib";
 
     /// <summary>
     /// Entry point called by the CI workflow (-buildMethod ShaderBuildScript.Build).
-    /// Assigns all shaders and HLSL/CG include files from Assets/Shaders to an
-    /// AssetBundle and builds it into the build/ directory.
+    /// Builds one self-contained AssetBundle per shader into the build/ directory.
     /// </summary>
-    [MenuItem("Build/Export Shader AssetBundle")]
+    [MenuItem("Build/Export Shader AssetBundles")]
     public static void Build()
     {
-        Debug.Log("[ShaderBuildScript] Starting ShaderLab AssetBundle build...");
+        Debug.Log("[ShaderBuildScript] Starting per-shader AssetBundle build...");
 
-        // Collect .shader assets
+        // Collect .shader assets.
         string[] shaderAssets = AssetDatabase
             .FindAssets("t:Shader", new[] { ShadersPath })
             .Select(AssetDatabase.GUIDToAssetPath)
             .ToArray();
 
-        // Collect HLSL / CG include files (stored as DefaultAsset by Unity)
-        string[] includeAssets = AssetDatabase
-            .FindAssets("t:DefaultAsset", new[] { ShadersPath })
-            .Select(AssetDatabase.GUIDToAssetPath)
-            .Where(p => p.EndsWith(".cginc") || p.EndsWith(".hlsl") || p.EndsWith(".glsl"))
-            .ToArray();
-
-        string[] allAssets = shaderAssets.Concat(includeAssets).ToArray();
-
-        if (allAssets.Length == 0)
+        if (shaderAssets.Length == 0)
         {
             Debug.LogError("[ShaderBuildScript] No shader assets found in " + ShadersPath);
             EditorApplication.Exit(1);
             return;
         }
 
-        Debug.Log($"[ShaderBuildScript] Assigning {allAssets.Length} asset(s) to bundle '{BundleName}':");
-        foreach (string asset in allAssets)
+        // Track every asset that receives a bundle assignment so we can clear
+        // the metadata afterwards and avoid persisting changes in the project.
+        var assignedAssets = new HashSet<string>();
+
+        // Assign each shader to its own named bundle.
+        // Include files (.cginc/.hlsl/.glsl) are intentionally excluded: Unity
+        // resolves them at bundle-build time and bakes the compiled bytecode into
+        // the shader asset, so they are not required at runtime.  Omitting them
+        // keeps every bundle truly independent with no cross-bundle references.
+        foreach (string shaderAsset in shaderAssets)
         {
-            Debug.Log($"[ShaderBuildScript]   {asset}");
-            AssetImporter importer = AssetImporter.GetAtPath(asset);
+            string bundleName = Path.GetFileNameWithoutExtension(shaderAsset).ToLowerInvariant();
+            Debug.Log($"[ShaderBuildScript] Bundle '{bundleName}' <- {shaderAsset}");
+
+            AssetImporter importer = AssetImporter.GetAtPath(shaderAsset);
             if (importer != null)
-                importer.SetAssetBundleNameAndVariant(BundleName, string.Empty);
+            {
+                importer.SetAssetBundleNameAndVariant(bundleName, string.Empty);
+                assignedAssets.Add(shaderAsset);
+            }
         }
 
         Directory.CreateDirectory(OutputDirectory);
@@ -67,8 +78,8 @@ public class ShaderBuildScript
         }
         finally
         {
-            // Clear bundle name assignments to avoid persisting metadata changes in the project.
-            foreach (string asset in allAssets)
+            // Clear bundle name assignments to avoid persisting metadata changes.
+            foreach (string asset in assignedAssets)
             {
                 AssetImporter importer = AssetImporter.GetAtPath(asset);
                 if (importer != null)
@@ -83,7 +94,11 @@ public class ShaderBuildScript
             return;
         }
 
-        Debug.Log($"[ShaderBuildScript] Build complete. AssetBundles written to: {OutputDirectory}/");
+        string[] builtBundles = manifest.GetAllAssetBundles();
+        Debug.Log($"[ShaderBuildScript] Build complete. {builtBundles.Length} bundle(s) written to: {OutputDirectory}/");
+        foreach (string b in builtBundles)
+            Debug.Log($"[ShaderBuildScript]   {b}");
+
         EditorApplication.Exit(0);
     }
 }
